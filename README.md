@@ -26,7 +26,10 @@ Keyin brauzerda oching: http://localhost:8000
 | 🗺️ Geografiya | 12 ta davlat: bayroqlar va poytaxtlar |
 | 🧩 Mantiq | Sonli ketma-ketlik, rangli naqsh, "ortiqchasini top" |
 | 🌍 Dunyo bilimi | 22 ta qiziqarli fakt va test |
-| 🎮 O'yinlar | Tez hisob (30 s), Xotira kartalari, Olmos ovi (3D olamda) |
+| 🎮 O'yinlar | Poyga (shaharcha atrofida 12 ta halqa), Shar yorish, So'z yig'ish, Tez hisob, Xotira kartalari, Olmos ovi |
+| 📋 Vazifalar | Har kuni 3 ta yangi vazifa + bonus, 17 ta yutuq (nishon), kunlik seriya (7-kuni katta sovg'a) |
+| 🎡 G'ildirak | Kuniga 1 marta bepul omad g'ildiragi: tanga, XP yoki karta |
+| 🧰 Orolda | Yashirin xazina sandiqlari, batutlar |
 | 🛍️ Do'kon / 👕 Kiyimlar | 86 ta narsa: 12 ta skin (o'g'il/qiz bola obrazlari), futbolka, shim/yubka, oyoq kiyim, soch turmagi, bosh kiyim, ko'zoynak, orqa, uy hayvonlari, karta to'plamlari |
 | 🏙️ Orol | Haqiqiy osmon, to'lqinli dengiz, shamolda tebranuvchi o'tlar, qushlar; 250 m katta orol: shaharcha, ko'p qavatli uylar, do'konlar, yo'llar, yuruvchi mashinalar, bog', o'yin maydonchasi, ~34 ta yuruvchi odam, kichik xarita (bosib tez borish) |
 | 🃏 Kartalar | 27 ta karta (oddiy/noyob/epik/afsonaviy). Har yangi darajada yangi kartalar ochiladi |

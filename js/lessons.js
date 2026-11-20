@@ -5,10 +5,11 @@ import { WORDS, FACTS, ODD_GROUPS } from './data.js';
 import { h, showSlides, runQuiz, shuffle, rand, pick } from './ui.js';
 import { speak } from './audio.js';
 import { openLesson2 } from './lessons2.js';
+import { track } from './progress.js';
 
 export const ACCENT = { math: '#4f8cff', english: '#ff5a5f', german: '#f4a300', logic: '#9b5de5', science: '#2ec4b6', shapes: '#00a6d6', clock: '#6aa51b', russian: '#c2185b' };
 
-const fin = s => { state.stats.lessons++; state.stats.correct += s; };
+const fin = s => { state.stats.lessons++; state.stats.correct += s; track('lesson'); track('correct', s); };
 
 export function openLesson(id) {
   const m = { math, english: () => vocab('en', 'english'), german: () => vocab('de', 'german'), russian: () => vocab('ru', 'russian'), logic, science, shapes, clock };

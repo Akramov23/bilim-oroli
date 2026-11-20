@@ -5,6 +5,7 @@ import { CARDS, ITEM_LIST, ITEMS, CATS, SKINS, RARITY, HAIR_COLORS } from './dat
 import { h, openModal, closeModal, toast, confetti, cardNode, pick } from './ui.js';
 import { sfx } from './audio.js';
 import { createPreview } from './world.js';
+import { track } from './progress.js';
 
 const ACC = '#ff6fb5';
 const ACCESSORY = ['hat', 'glasses', 'back', 'pet', 'costume'];
@@ -68,7 +69,7 @@ export function openShop(mode = 'shop', startCat) {
     state.coins -= it.price;
     state.owned.push(it.id);
     state.outfit[it.cat] = it.id;
-    save(); sfx.coin(); confetti(40);
+    save(); sfx.coin(); confetti(40); track('buy');
     toast('🎉 ' + t('bought'));
     refresh();
   }
@@ -99,7 +100,7 @@ export function openPack(it) {
   const card = pick(pool.length ? pool : CARDS.filter(c => c.lvl === 0));
   const dup = state.cards.includes(card.id);
   if (dup) state.coins += it.dup; else state.cards.push(card.id);
-  save();
+  save(); track('buy');
   sfx.pack();
   const stage = h('div', { class: 'pack-stage' }, h('div', { class: 'pack-back shake-long', style: { '--rc': RARITY[card.r].color } }, it.icon));
   const after = h('div', { class: 'pack-after hidden' },

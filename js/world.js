@@ -783,6 +783,64 @@ export function createWorld(canvasEl, opts) {
     const [x, z] = randomSpot(); c.position.set(x, 0.9, z); c.userData = { respawn: 0 }; scene.add(c); coins.push(c);
   }
 
+  // ----- Xazina sandiqlari -----
+  const woodC = mat(0x8b5a2b, { roughness: 0.7 }), goldC = mat(0xffc93c, { metalness: 0.8, roughness: 0.3, emissive: 0x5a3c00, emissiveIntensity: 0.3 });
+  function chestMesh() {
+    const g = new THREE.Group();
+    const base = sh(new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.55, 0.75), woodC)); base.position.y = 0.28; g.add(base);
+    for (const x of [-0.4, 0.4]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.57, 0.77), goldC); b.position.set(x, 0.28, 0); g.add(b); }
+    const lid = new THREE.Group(); lid.position.set(0, 0.55, -0.375); g.add(lid);
+    const top = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.375, 0.375, 1.1, 14, 1, false, 0, Math.PI), woodC)); top.rotation.z = Math.PI / 2; top.position.z = 0.375; lid.add(top);
+    const lock = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.2, 0.06), goldC); lock.position.set(0, 0.5, 0.39); g.add(lock);
+    const spark = new THREE.Mesh(new THREE.OctahedronGeometry(0.18), mat(0xfff3b0, { emissive: 0xffd166, emissiveIntensity: 1.2 })); spark.position.y = 1.5; g.add(spark);
+    return { g, lid, spark };
+  }
+  const chests = [];
+  function placeChest(c) {
+    for (let k = 0; k < 60; k++) { const [x, z] = randomSpot(); if (Math.hypot(x, z) > 34) { c.g.position.set(x, 0, z); c.g.rotation.y = Math.random() * 6.28; break; } }
+    c.open = false; c.t = 0; c.lid.rotation.x = 0; c.g.visible = true; c.spark.visible = true;
+  }
+  for (let i = 0; i < 7; i++) { const c = chestMesh(); scene.add(c.g); chests.push(c); placeChest(c); }
+
+  // ----- Batutlar -----
+  const tramps = [];
+  for (const k of [1, 3, 6, 8, 10, 12]) {
+    const a = (k + 0.5) / STATIONS.length * Math.PI * 2, r = 33.5;
+    const x = Math.sin(a) * r, z = Math.cos(a) * r;
+    if (!walkable(x, z, 1.4)) continue;
+    const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
+    const frame = sh(new THREE.Mesh(new THREE.TorusGeometry(1.3, 0.12, 10, 32), mat(0x3a86ff, { roughness: 0.4 }))); frame.rotation.x = Math.PI / 2; frame.position.y = 0.45; g.add(frame);
+    const pad = new THREE.Mesh(new THREE.CircleGeometry(1.25, 32), mat(0x222831, { roughness: 0.6 })); pad.rotation.x = -Math.PI / 2; pad.position.y = 0.44; g.add(pad);
+    const ring2 = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.62, 32), mat(0xffd166)); ring2.rotation.x = -Math.PI / 2; ring2.position.y = 0.445; g.add(ring2);
+    for (let i = 0; i < 6; i++) { const la = i / 6 * 6.28; const leg = sh(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.45), ironM)); leg.position.set(Math.sin(la) * 1.25, 0.22, Math.cos(la) * 1.25); g.add(leg); }
+    tramps.push({ x, z, pad, ring2, squash: 0 });
+  }
+
+  // ----- Poyga -----
+  let race = null;
+  const ringGeo = new THREE.TorusGeometry(2.6, 0.2, 10, 40);
+  const arrowGeo = new THREE.ConeGeometry(0.25, 0.75, 12); arrowGeo.rotateX(Math.PI / 2);
+  const arrow = new THREE.Mesh(arrowGeo, mat(0xff3b3b, { emissive: 0xff3b3b, emissiveIntensity: 0.6 })); arrow.visible = false; scene.add(arrow);
+  function startRace(onTick, onEnd) {
+    stopRace(true);
+    const N = 12, a0 = Math.atan2(pos.x, pos.z) + 0.25, rings = [];
+    for (let k = 0; k < N; k++) {
+      const a = a0 + k / N * Math.PI * 2, last = k === N - 1;
+      const m = new THREE.Mesh(ringGeo, mat(last ? 0xffc93c : 0x2ec4b6, { emissive: last ? 0xffa500 : 0x2ec4b6, emissiveIntensity: 0.5, transparent: true, opacity: 0.9 }));
+      m.position.set(Math.sin(a) * ROAD_R, 2.7, Math.cos(a) * ROAD_R);
+      m.rotation.y = Math.atan2(Math.cos(a), -Math.sin(a));
+      scene.add(m); rings.push(m);
+    }
+    race = { rings, idx: 0, t: 0, acc: 0, onTick, onEnd, N };
+    arrow.visible = true;
+  }
+  function stopRace(silent) {
+    if (!race) return;
+    race.rings.forEach(r => scene.remove(r)); arrow.visible = false;
+    const r = race; race = null;
+    if (!silent) r.onEnd(r.t);
+  }
+
   // ----- Yuradigan odamlar -----
   const npcs = [];
   function spawnNPCs(n) {
@@ -989,6 +1047,7 @@ export function createWorld(canvasEl, opts) {
     for (const s of stationObjs) { g.fillText(s.emoji, C + s.pos.x * S * 1.25, C + s.pos.y * S * 1.25); }
     g.fillStyle = '#4f8cff';
     for (const r of remotes.values()) { g.beginPath(); g.arc(C + r.ch.group.position.x * S, C + r.ch.group.position.z * S, W * 0.022, 0, 7); g.fill(); }
+    if (race) { const rp = race.rings[race.idx].position; g.fillStyle = '#ffd166'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.arc(C + rp.x * S, C + rp.z * S, W * 0.03, 0, 7); g.fill(); g.stroke(); }
     if (hunt) { g.fillStyle = '#d06bff'; for (const gm of hunt.gems) if (gm.visible) { g.beginPath(); g.arc(C + gm.position.x * S, C + gm.position.z * S, W * 0.015, 0, 7); g.fill(); } }
     g.restore();
     g.save(); g.translate(C + pos.x * S, C + pos.z * S); g.rotate(-facing + Math.PI);
@@ -1127,6 +1186,35 @@ export function createWorld(canvasEl, opts) {
       if (hunt.left <= 0 || hunt.got >= hunt.count) stopHunt(false);
     }
 
+    // Sandiqlar
+    for (const c of chests) {
+      if (!c.g.visible) { if (now > c.respawn) placeChest(c); continue; }
+      c.spark.rotation.y += dt * 2; c.spark.position.y = 1.5 + Math.sin(time * 3) * 0.15;
+      if (!c.open && Math.hypot(pos.x - c.g.position.x, pos.z - c.g.position.z) < 1.6) { c.open = true; c.t = 0; c.spark.visible = false; opts.onChest && opts.onChest(); }
+      if (c.open) { c.t += dt; c.lid.rotation.x = -Math.min(1.9, c.t * 4); if (c.t > 2.5) { c.g.visible = false; c.respawn = now + 150000; } }
+    }
+    // Batutlar
+    for (const tp of tramps) {
+      if (tp.squash > 0) tp.squash = Math.max(0, tp.squash - dt * 0.8);
+      tp.pad.position.y = tp.ring2.position.y = 0.44 - tp.squash;
+      if (onGround && pos.y < 0.05 && Math.hypot(pos.x - tp.x, pos.z - tp.z) < 1.15) { vy = 15; onGround = false; tp.squash = 0.2; opts.onTrampoline && opts.onTrampoline(); }
+    }
+    // Poyga
+    if (race) {
+      race.t += dt; race.acc += dt;
+      race.rings.forEach((r, i) => { r.material.opacity = i === race.idx ? 1 : 0.35; if (i === race.idx) r.rotation.z += dt * 1.5; });
+      const rg = race.rings[race.idx];
+      if (Math.hypot(pos.x - rg.position.x, pos.z - rg.position.z) < 3) {
+        rg.visible = false; race.idx++; opts.onRing && opts.onRing();
+        if (race.idx >= race.N) stopRace(false);
+      }
+      if (race) {
+        const nx = race.rings[race.idx].position;
+        arrow.position.set(pos.x, pos.y + 2.45, pos.z); arrow.lookAt(nx.x, pos.y + 2.45, nx.z);
+        if (race.acc > 0.2) { race.acc = 0; race.onTick(race.t, race.idx, race.N); }
+      }
+    }
+
     // Mashinalar
     for (const c of cars) {
       const ahx = Math.sin(c.th + c.dir * 7 / c.lane) * c.lane, ahz = Math.cos(c.th + c.dir * 7 / c.lane) * c.lane;
@@ -1217,7 +1305,7 @@ export function createWorld(canvasEl, opts) {
   return Object.assign(api, {
     setOutfit: o => { player.setOutfit(o); setPet(o.pet || null); },
     setLabels, setNight, setQuality, startHunt, stopHunt,
-    setRemote, removeRemote, showEmote, attachMinimap, teleport,
+    setRemote, removeRemote, showEmote, attachMinimap, teleport, startRace, stopRace,
     clearRemotes: () => [...remotes.keys()].forEach(removeRemote),
     getPlayerState: () => ({ x: +pos.x.toFixed(2), y: +pos.y.toFixed(2), z: +pos.z.toFixed(2), ry: +facing.toFixed(2), m: +speedNow.toFixed(2), air: !onGround }),
     init: o => setPet(o.pet || null),

@@ -433,3 +433,62 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .geo-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px; border-radius: 16px; background: var(--panel2); border: 2px solid var(--border); text-align: center; }
 .geo-card .flag { font-size: 44px; }
 .geo-card small { color: var(--muted); }
+
+/* ---------- Vazifalar, yutuqlar ---------- */
+.hud-menu button { position: relative; }
+.badge { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #ff4d5e; color: #fff; font-size: 11px; font-style: normal; font-weight: 900; display: grid; place-items: center; box-shadow: 0 2px 0 rgba(0,0,0,.2); }
+.badge:empty { display: none; }
+.quests { display: flex; flex-direction: column; gap: 10px; }
+.streak-pill { align-self: center; padding: 8px 18px; border-radius: 999px; background: linear-gradient(90deg, #ff8c42, #ff5a5f); color: #fff; font-size: 18px; }
+.quest { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; background: var(--panel2); border: 3px solid var(--border); }
+.quest.done { border-color: var(--good); }
+.quest.bonus { border-style: dashed; }
+.qe { font-size: 34px; width: 46px; text-align: center; }
+.qbody { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.qtitle { font-size: 16px; }
+.qbody .progress { flex: none; height: 14px; }
+.qrew { display: flex; flex-direction: column; align-items: flex-end; font-size: 15px; }
+.qrew small { color: #c98a00; }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+.ach { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border-radius: 18px; background: var(--panel2); border: 3px solid var(--border); text-align: center; }
+.ach .ae { font-size: 40px; filter: grayscale(1) opacity(0.45); }
+.ach.ok { border-color: #ffc93c; background: color-mix(in srgb, #ffc93c 14%, var(--panel2)); }
+.ach.ok .ae { filter: none; }
+.ach b { font-size: 13px; }
+.ach small { color: var(--muted); font-size: 12px; }
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; width: 100%; }
+.wday { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border-radius: 12px; background: var(--panel2); border: 2px solid var(--border); }
+.wday span { font-size: 20px; }
+.wday small { font-size: 10px; color: var(--muted); }
+.wday.past { border-color: var(--good); }
+.wday.now { border-color: #ffb703; transform: scale(1.1); background: #fff3c7; }
+:root[data-theme="dark"] .wday.now { background: #4a3a10; }
+
+/* ---------- Omad g'ildiragi ---------- */
+.wheel-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.wheel-box { position: relative; width: min(320px, 78vw); aspect-ratio: 1; }
+.wheel { width: 100%; height: 100%; border-radius: 50%; border: 8px solid #fff; box-shadow: 0 0 0 4px var(--accent), var(--shadow); position: relative; transition: transform 4.2s cubic-bezier(.12, .8, .15, 1); }
+.wlabel { position: absolute; inset: 0; display: flex; justify-content: center; }
+.wlabel span { margin-top: 8%; font-size: 15px; font-weight: 900; color: #fff; text-align: center; text-shadow: 0 2px 2px rgba(0,0,0,.35); line-height: 1.1; }
+.wpointer { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); z-index: 2; font-size: 34px; color: #ff4d5e; text-shadow: 0 2px 0 #fff; }
+
+/* ---------- Shar yorish ---------- */
+.balloon-game { text-align: center; }
+.balloon-field { position: relative; height: 360px; overflow: hidden; border-radius: 20px; background: linear-gradient(180deg, #bfe6ff, #eef9ff); margin-top: 8px; }
+:root[data-theme="dark"] .balloon-field { background: linear-gradient(180deg, #1e2a66, #2a3478); }
+.balloon { position: absolute; bottom: -90px; width: 66px; height: 80px; border-radius: 50% 50% 46% 46%; color: #fff; font-size: 24px; font-weight: 900; text-shadow: 0 2px 0 rgba(0,0,0,.25); box-shadow: inset -8px -10px 0 rgba(0,0,0,.12), inset 6px 6px 0 rgba(255,255,255,.3); animation: floatUp linear forwards; touch-action: manipulation; }
+.balloon::after { content: ''; position: absolute; left: 50%; bottom: -26px; width: 2px; height: 26px; background: rgba(0,0,0,.25); }
+@keyframes floatUp { to { bottom: 380px; } }
+@keyframes popB { to { transform: scale(1.8); opacity: 0; } }
+.balloon.pop { animation: popB 0.25s forwards; }
+
+/* ---------- So'z yig'ish ---------- */
+.scramble { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.slots { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.slot { width: 46px; height: 54px; border-radius: 12px; border: 3px dashed var(--border); display: grid; place-items: center; font-size: 26px; font-weight: 900; }
+.slot.filled { border-style: solid; border-color: var(--accent); }
+.slots.ok .slot { border-color: var(--good); background: color-mix(in srgb, var(--good) 20%, transparent); }
+.tiles { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.tile { width: 52px; height: 56px; border-radius: 14px; font-size: 26px; font-weight: 900; color: #fff; background: var(--accent); box-shadow: 0 5px 0 rgba(0,0,0,.25); }
+.tile:disabled { opacity: 0.25; transform: translateY(4px); box-shadow: none; }
+@media (max-width: 700px) { .hud-menu button { width: 46px; } .hud-menu { gap: 4px; } }

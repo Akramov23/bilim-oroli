@@ -8,7 +8,8 @@ import { openLesson } from './lessons.js';
 import { openGames, initGames } from './games.js';
 import { openShop, openAlbum, openSettings } from './panels.js';
 import { openFriends, initFriends, sendEmote } from './friends.js';
-import { SKINS } from './data.js';
+import { SKINS, CARDS } from './data.js';
+import { track, openQuests, openWheel, showDaily, questBadge, canSpinFree } from './progress.js';
 
 let world = null;
 let near = null;
@@ -46,6 +47,8 @@ function updateHud() {
     shownCoins = state.coins;
   }
   $('#coinCount').textContent = state.coins;
+  $('#questBadge').textContent = questBadge();
+  $('#wheelBadge').classList.toggle('hidden', !canSpinFree());
 }
 
 function updateEnter() {
@@ -145,18 +148,10 @@ function startGame(first) {
   hint.classList.add('show');
   setTimeout(() => hint.classList.remove('show'), 9000);
   setTimeout(checkDaily, first ? 2500 : 600);
+  setTimeout(() => track('check', 0), first ? 6000 : 3000);
 }
 
-function checkDaily() {
-  const today = new Date().toDateString();
-  if (state.lastDaily === today) return;
-  const amount = 20 + Math.min(level(), 10) * 2;
-  const node = h('div', { class: 'reward' },
-    h('div', { class: 'big-emoji bounce' }, '🎁'),
-    h('h3', {}, t('dailyText', { c: amount })),
-    h('button', { class: 'btn gold big', onclick: () => { state.lastDaily = today; const r = grant(amount, 0); sfx.coin(); confetti(60); closeModal(); } }, t('collect')));
-  openModal(t('daily'), node, { accent: '#ffb703' });
-}
+function checkDaily() { showDaily(); }
 
 // ---------- Ishga tushirish ----------
 function boot() {
@@ -166,7 +161,19 @@ function boot() {
       joystick: $('#joystick'),
       jumpBtn: $('#jumpBtn'),
       onNear: id => { near = id; updateEnter(); },
-      onCoin: () => { state.coins++; save(); sfx.coin(); },
+      onCoin: () => { state.coins++; sfx.coin(); track('coin'); },
+      onChest: () => {
+        sfx.pack();
+        const c = 15 + Math.floor(Math.random() * 26);
+        let msg = '🧰 ' + t('chestFound', { c });
+        if (Math.random() < 0.2) {
+          const pool = CARDS.filter(x => x.lvl === 0 && !state.cards.includes(x.id) && x.r !== 'legendary');
+          if (pool.length) { const card = pool[Math.floor(Math.random() * pool.length)]; state.cards.push(card.id); msg += '  ' + t('chestCard') + ' ' + card.e; }
+        }
+        grant(c, 5); confetti(50); toast(msg, 3500); track('chest');
+      },
+      onTrampoline: () => { sfx.jump(); track('jump'); },
+      onRing: () => sfx.coin(),
       onGem: () => sfx.coin(),
       onJump: () => sfx.jump(),
     });
@@ -186,7 +193,7 @@ function boot() {
 
   // HUD tugmalari
   document.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => {
-    ({ cards: openAlbum, shop: () => openShop('shop'), wardrobe: () => openShop('wardrobe'), friends: openFriends, settings: openSettings })[b.dataset.open]();
+    ({ quests: () => openQuests(), wheel: openWheel, cards: openAlbum, shop: () => openShop('shop'), wardrobe: () => openShop('wardrobe'), friends: openFriends, settings: openSettings })[b.dataset.open]();
   }));
   $('#enterBtn').addEventListener('click', () => near && enterStation(near));
   $('#modalClose').addEventListener('click', closeModal);

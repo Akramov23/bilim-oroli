@@ -4,10 +4,11 @@ import { state, save, level } from './state.js';
 import { WORDS } from './data.js';
 import { h, showSlides, runQuiz, shuffle, rand, pick } from './ui.js';
 import { speak } from './audio.js';
+import { track } from './progress.js';
 
 export const ACCENT2 = { letters: '#ef476f', animals: '#8d6e3f', money: '#e0a100', geo: '#118ab2' };
 const L = (uz, ru, en, de) => ({ uz, ru, en, de });
-const fin = s => { state.stats.lessons++; state.stats.correct += s; };
+const fin = s => { state.stats.lessons++; state.stats.correct += s; track('lesson'); track('correct', s); };
 
 export function openLesson2(id) {
   ({ letters, animals, money, geo })[id]();

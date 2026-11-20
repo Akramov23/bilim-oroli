@@ -16,7 +16,11 @@ const DEFAULTS = () => ({
   owned: ['shirt_blue', 'pants_navy', 'shoes_white', 'hair_short', 'hair_long'],
   outfit: { gender: 'boy', costume: null, skin: '#f1c27d', hairColor: '#4a2f1b', shirt: 'shirt_blue', pants: 'pants_navy', shoes: 'shoes_white', hair: 'hair_short', hat: null, glasses: null, back: null, pet: null },
   stats: { lessons: 0, correct: 0, wordIdx: 0, factIdx: 0 },
-  best: { speed: 0, memory: 0, hunt: 0 },
+  best: { speed: 0, memory: 0, hunt: 0, race: 0, balloon: 0, scramble: 0 },
+  quests: null,
+  ach: {},
+  streak: { count: 0 },
+  lastSpin: null,
   lastDaily: null,
   onboarded: false,
 });
