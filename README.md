@@ -20,11 +20,15 @@ Keyin brauzerda oching: http://localhost:8000
 | 🔤 Ingliz / 🥨 Nemis / 🪆 Rus tili | 42 ta so'z, ovozli talaffuz (🔊), so'z ↔ rasm testlari |
 | 🔷 Shakllar | 8 ta shakl, burchaklarni sanash |
 | 🕐 Soat | Soatni o'qish (to'liq soat → yarim → chorak) |
+| 🔠 Harflar | Alifbo (o'zbek/rus/ingliz/nemis), so'z qaysi harf bilan boshlanadi |
+| 🐾 Hayvonlar | 16 ta savol: kim qayerda yashaydi, nima yeydi |
+| 💰 Pul hisobi | Tangalarni sanash, narxlarni qo'shish, qaytim |
+| 🗺️ Geografiya | 12 ta davlat: bayroqlar va poytaxtlar |
 | 🧩 Mantiq | Sonli ketma-ketlik, rangli naqsh, "ortiqchasini top" |
 | 🌍 Dunyo bilimi | 22 ta qiziqarli fakt va test |
 | 🎮 O'yinlar | Tez hisob (30 s), Xotira kartalari, Olmos ovi (3D olamda) |
 | 🛍️ Do'kon / 👕 Kiyimlar | 86 ta narsa: 12 ta skin (o'g'il/qiz bola obrazlari), futbolka, shim/yubka, oyoq kiyim, soch turmagi, bosh kiyim, ko'zoynak, orqa, uy hayvonlari, karta to'plamlari |
-| 🏙️ Orol | 250 m katta orol: shaharcha, ko'p qavatli uylar, do'konlar, yo'llar, yuruvchi mashinalar, bog', o'yin maydonchasi, ~34 ta yuruvchi odam, kichik xarita (bosib tez borish) |
+| 🏙️ Orol | Haqiqiy osmon, to'lqinli dengiz, shamolda tebranuvchi o'tlar, qushlar; 250 m katta orol: shaharcha, ko'p qavatli uylar, do'konlar, yo'llar, yuruvchi mashinalar, bog', o'yin maydonchasi, ~34 ta yuruvchi odam, kichik xarita (bosib tez borish) |
 | 🃏 Kartalar | 27 ta karta (oddiy/noyob/epik/afsonaviy). Har yangi darajada yangi kartalar ochiladi |
 | 👫 Do'stlar | Xona kodi orqali do'st bilan bitta orolda yurish, emoji yuborish, ⚔️ matematik bellashuv |
 | ⚙️ Sozlamalar | Til (UZ/RU/EN/DE), kunduz/tun/avto, ovoz, musiqa, grafika, ism, progressni o'chirish |

@@ -1,23 +1,30 @@
 // Katta 3D orol: markaziy maydon, dars binolari, shaharcha (uylar, do'konlar, yo'llar, mashinalar),
 // bog'lar, yuradigan odamlar, uy hayvoni, kichik xarita.
 import * as THREE from 'three';
+import { Sky } from 'three/addons/objects/Sky.js';
+import { Water } from 'three/addons/objects/Water.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeCharacter, makeNPC, makePet } from './character.js';
 
 export const STATIONS = [
   { id: 'math', emoji: '🔢', color: 0x4f8cff, kind: 'tower' },
   { id: 'english', emoji: '🔤', color: 0xff5a5f, kind: 'house' },
   { id: 'shapes', emoji: '🔷', color: 0x00a6d6, kind: 'school' },
+  { id: 'letters', emoji: '🔠', color: 0xef476f, kind: 'dome' },
   { id: 'games', emoji: '🎮', color: 0xff8c42, kind: 'dome' },
   { id: 'german', emoji: '🥨', color: 0xf4a300, kind: 'house' },
   { id: 'clock', emoji: '🕐', color: 0x6aa51b, kind: 'tower' },
-  { id: 'logic', emoji: '🧩', color: 0x9b5de5, kind: 'school' },
+  { id: 'money', emoji: '💰', color: 0xe0a100, kind: 'school' },
+  { id: 'logic', emoji: '🧩', color: 0x9b5de5, kind: 'tower' },
   { id: 'shop', emoji: '🛍️', color: 0xff6fb5, kind: 'stall' },
   { id: 'russian', emoji: '🪆', color: 0xc2185b, kind: 'house' },
+  { id: 'animals', emoji: '🐾', color: 0x8d6e3f, kind: 'house' },
   { id: 'science', emoji: '🌍', color: 0x2ec4b6, kind: 'dome' },
+  { id: 'geo', emoji: '🗺️', color: 0x118ab2, kind: 'school' },
 ];
 
 export const ISLAND_R = 125;
-const RING_R = 26, BUILD_R = 36;
+const RING_R = 28, BUILD_R = 40;
 const ROAD_R = 64, ROAD_HW = 3.6, WALK_W = 2.2;
 const RADIAL = [1, 3, 5, 7].map(k => k * Math.PI / 4);
 const RADIAL_FROM = 46, RADIAL_TO = 119;
@@ -101,6 +108,20 @@ function facadeMat(wall, style, cellsX, floors) {
   const m = new THREE.MeshStandardMaterial({ map, emissiveMap: emis, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.88 });
   nightMats.push(m);
   return m;
+}
+
+function waterNormalsTex() {
+  const S = 256, cv = canvas(S), g = cv.getContext('2d'), img = g.createImageData(S, S);
+  const W = [[3, 1, 0.5], [1, 4, 0.4], [5, 3, 0.22], [7, -2, 0.14], [-4, 6, 0.12], [11, 5, 0.07], [-9, 13, 0.05]];
+  const H = (x, y) => W.reduce((v, [a, b, amp]) => v + Math.sin((a * x + b * y) * 2 * Math.PI / S) * amp, 0);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const dx = (H(x + 1, y) - H(x - 1, y)) * 9, dy = (H(x, y + 1) - H(x, y - 1)) * 9;
+    const l = Math.hypot(dx, dy, 1), i = (y * S + x) * 4;
+    img.data[i] = (-dx / l * 0.5 + 0.5) * 255; img.data[i + 1] = (-dy / l * 0.5 + 0.5) * 255; img.data[i + 2] = (1 / l * 0.5 + 0.5) * 255; img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
 }
 
 // ---------- Yorliqlar ----------
@@ -321,7 +342,7 @@ export function createWorld(canvasEl, opts) {
 
   const hemi = new THREE.HemisphereLight(0xd6ecff, 0x6f9a4a, 1.1); scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xfff4e0, 2.2);
-  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+  sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096);
   Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 200 });
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
   scene.add(sun); scene.add(sun.target);
@@ -330,9 +351,42 @@ export function createWorld(canvasEl, opts) {
   const footprints = []; // xarita uchun
 
   // ----- Yer -----
-  const waterTex = noiseTex('#3fa9dc', ['#5cc3ee', '#2f8fc2', '#7fd3f5'], 900, 256, 60);
-  const waterM = mat(0xffffff, { map: waterTex, roughness: 0.15, metalness: 0.15 });
-  const water = new THREE.Mesh(new THREE.CircleGeometry(600, 64), waterM); water.rotation.x = -Math.PI / 2; water.position.y = -0.8; water.receiveShadow = true; scene.add(water);
+  // Haqiqiy osmon (atmosfera) va undan olingan muhit yorug'ligi
+  const sunDir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(50), THREE.MathUtils.degToRad(35));
+  const mkSky = () => {
+    const sk = new Sky(); sk.scale.setScalar(5000);
+    const u = sk.material.uniforms;
+    u.turbidity.value = 3; u.rayleigh.value = 1.0; u.mieCoefficient.value = 0.004; u.mieDirectionalG.value = 0.82;
+    u.sunPosition.value.copy(sunDir);
+    return sk;
+  };
+  const sky = mkSky(); scene.add(sky);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const envScene = new THREE.Scene();
+  {
+    const g = new THREE.SphereGeometry(100, 32, 16), col = [], c = new THREE.Color();
+    const top = new THREE.Color(0x6f9fd6), hor = new THREE.Color(0xd4e3f0), bot = new THREE.Color(0x4f6e3c);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) { const y = p.getY(i) / 100; if (y >= 0) c.copy(hor).lerp(top, Math.pow(y, 0.6)); else c.copy(hor).lerp(bot, Math.min(1, -y * 3)); col.push(c.r * 0.9, c.g * 0.9, c.b * 0.9); }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    envScene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+    const sunBlob = new THREE.Mesh(new THREE.SphereGeometry(6, 12, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 3.8, 3.4) }));
+    sunBlob.position.copy(sunDir).multiplyScalar(90); envScene.add(sunBlob);
+  }
+  const dayEnv = pmrem.fromScene(envScene).texture;
+  const nightScene = new THREE.Scene(); nightScene.background = new THREE.Color(0x1c2550);
+  const nightEnv = pmrem.fromScene(nightScene).texture;
+  scene.environment = dayEnv;
+
+  // Dengiz: to'lqinli, osmon va quyoshni aks ettiradi
+  const water = new Water(new THREE.PlaneGeometry(3000, 3000), {
+    textureWidth: 512, textureHeight: 512, waterNormals: waterNormalsTex(),
+    sunDirection: sunDir.clone(), sunColor: 0xfff4e0, waterColor: 0x0e5a7d, distortionScale: 2.2, fog: true,
+  });
+  water.material.uniforms.size.value = 3;
+  water.rotation.x = -Math.PI / 2; water.position.y = -0.6; scene.add(water);
+  const waterM = mat(0x2f8fc2, { roughness: 0.15, metalness: 0.2 });
+  const waterLow = new THREE.Mesh(new THREE.CircleGeometry(700, 64), waterM); waterLow.rotation.x = -Math.PI / 2; waterLow.position.y = -0.62; waterLow.visible = false; scene.add(waterLow);
   const sandM = mat(0xffffff, { map: noiseTex('#ecd49a', ['#d9bd7c', '#f6e3b3', '#c9a964'], 3000, 256, 50) });
   const sand = sh(new THREE.Mesh(new THREE.CylinderGeometry(ISLAND_R + 7, ISLAND_R + 11, 1.2, 96), sandM), false); sand.position.y = -0.62; scene.add(sand);
   const grassM = mat(0xffffff, { map: noiseTex('#68b545', ['#5aa83a', '#79c455', '#4e9a32', '#86cf5f', '#62ad40'], 9000, 256, 70, true) });
@@ -345,8 +399,8 @@ export function createWorld(canvasEl, opts) {
   // Markazdan bekatlarga yo'lakchalar
   STATIONS.forEach((s, i) => {
     const a = (i + 0.5) / STATIONS.length * Math.PI * 2;
-    const gp = new THREE.Group(); gp.rotation.y = a; gp.position.set(Math.sin(a) * 17, 0, Math.cos(a) * 17); scene.add(gp);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 12), pavM); m.rotation.x = -Math.PI / 2; m.position.y = 0.021; m.receiveShadow = true; gp.add(m);
+    const gp = new THREE.Group(); gp.rotation.y = a; gp.position.set(Math.sin(a) * 18.2, 0, Math.cos(a) * 18.2); scene.add(gp);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 14.4), pavM); m.rotation.x = -Math.PI / 2; m.position.y = 0.021; m.receiveShadow = true; gp.add(m);
   });
 
   // ----- Yo'llar -----
@@ -515,8 +569,10 @@ export function createWorld(canvasEl, opts) {
 
   // ----- Daraxtlar (instanced) -----
   const trunkG = new THREE.CylinderGeometry(0.16, 0.26, 2.2, 7); trunkG.translate(0, 1.1, 0);
-  const roundG = new THREE.IcosahedronGeometry(1.6, 1);
-  const pineG = new THREE.ConeGeometry(1.5, 4.4, 9);
+  const blob = (r, x, y, z) => new THREE.IcosahedronGeometry(r, 1).translate(x, y, z);
+  const roundG = mergeGeometries([blob(1.25, 0, 0, 0), blob(0.95, 0.95, -0.3, 0.3), blob(0.95, -0.85, -0.2, -0.4), blob(0.85, 0.2, 0.65, -0.7), blob(0.8, -0.3, 0.55, 0.8), blob(0.75, 0.5, 0.2, 0.95)]);
+  const cone = (r, hh, y) => { const c = new THREE.ConeGeometry(r, hh, 10); c.translate(0, y, 0); return c.toNonIndexed(); };
+  const pineG = mergeGeometries([cone(1.65, 2.2, -1.0), cone(1.3, 2.0, 0.15), cone(0.9, 1.8, 1.25), cone(0.45, 1.1, 2.1)]);
   const bushG = new THREE.IcosahedronGeometry(0.9, 1);
   const leafM = mat(0xffffff, { roughness: 0.9, flatShading: true });
   const MAXT = 420;
@@ -615,13 +671,101 @@ export function createWorld(canvasEl, opts) {
     cars.push({ g, th: i / 9 * Math.PI * 2, dir, lane: ROAD_R + dir * 1.8, v: 0, max: 7 + rand() * 4 });
   }
 
+  // ----- To'qnashuvlar panjarasi (tez qidirish uchun) -----
+  const GRID = 8, sgrid = new Map(), EMPTY = [];
+  for (const c of statics) {
+    const r = c.r + 1.2;
+    for (let gx = Math.floor((c.x - r) / GRID); gx <= Math.floor((c.x + r) / GRID); gx++)
+      for (let gz = Math.floor((c.z - r) / GRID); gz <= Math.floor((c.z + r) / GRID); gz++) {
+        const k = gx * 1000 + gz; if (!sgrid.has(k)) sgrid.set(k, []); sgrid.get(k).push(c);
+      }
+  }
+  const nearS = (x, z) => sgrid.get(Math.floor(x / GRID) * 1000 + Math.floor(z / GRID)) || EMPTY;
+
+  // ----- O't (shamolda tebranadi) -----
+  const bladeGeo = new THREE.BufferGeometry();
+  bladeGeo.setAttribute('position', new THREE.Float32BufferAttribute([-0.04, 0, 0, 0.04, 0, 0, -0.026, 0.5, 0, 0.026, 0.5, 0, 0, 1, 0], 3));
+  bladeGeo.setAttribute('normal', new THREE.Float32BufferAttribute([0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0], 3));
+  bladeGeo.setAttribute('color', new THREE.Float32BufferAttribute([0.42, 0.55, 0.32, 0.42, 0.55, 0.32, 0.75, 0.85, 0.62, 0.75, 0.85, 0.62, 1, 1, 0.9], 3));
+  bladeGeo.setIndex([0, 1, 2, 2, 1, 3, 2, 3, 4]);
+  const grassUniforms = { uTime: { value: 0 } };
+  const bladeM = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, side: THREE.DoubleSide, roughness: 0.95 });
+  bladeM.onBeforeCompile = shd => {
+    shd.uniforms.uTime = grassUniforms.uTime;
+    shd.vertexShader = 'uniform float uTime;\n' + shd.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vec4 gwp = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+      float gw = sin(uTime * 1.7 + gwp.x * 0.32 + gwp.z * 0.21) * 0.16 + sin(uTime * 3.1 + gwp.x * 0.9 + gwp.z * 0.7) * 0.05;
+      float gh = position.y * position.y;
+      transformed.x += gw * gh; transformed.z += gw * 0.55 * gh;`);
+  };
+  const CH = 8, CR = 3, PER = 900;
+  const chunks = new Map();
+  let lastChunk = '';
+  const gcol = new THREE.Color(), gq = new THREE.Quaternion(), gv = new THREE.Vector3(), gs = new THREE.Vector3(), gm = new THREE.Matrix4();
+  function grassOK(x, z) {
+    const r = Math.hypot(x, z);
+    if (r > ISLAND_R - 1.5 || r < 11.6) return false;
+    if (r > RING_R - 3 && r < RING_R + 0.8) return false;
+    if (r < RING_R - 2.8) { const a = Math.atan2(x, z); for (let i = 0; i < STATIONS.length; i++) { const d = angDiff(a, (i + 0.5) / STATIONS.length * Math.PI * 2); if (Math.abs(d) < 0.5 && r * Math.sin(Math.abs(d)) < 1.3) return false; } }
+    if (onRoad(x, z, WALK_W + 0.2)) return false;
+    return !inside(x, z, 0.12, nearS(x, z));
+  }
+  function makeChunk(cx, cz) {
+    const rr = rng(Math.abs((cx * 7349 + cz * 9157 + 99991) % 2147483646) + 1);
+    const inst = new THREE.InstancedMesh(bladeGeo, bladeM, PER);
+    let n = 0;
+    for (let i = 0; i < PER; i++) {
+      const x = (cx + rr()) * CH, z = (cz + rr()) * CH;
+      if (!grassOK(x, z)) { rr(); rr(); rr(); rr(); continue; }
+      const hgt = 0.3 + rr() * 0.45;
+      gm.compose(gv.set(x, 0, z), gq.setFromAxisAngle(yAx, rr() * 6.28), gs.set(1, hgt, 1));
+      inst.setMatrixAt(n, gm);
+      gcol.setHSL(0.22 + rr() * 0.07, 0.5 + rr() * 0.2, 0.36); inst.setColorAt(n, gcol);
+      n++;
+    }
+    inst.count = n; inst.receiveShadow = true;
+    inst.computeBoundingSphere();
+    scene.add(inst);
+    return inst;
+  }
+  function updateGrass() {
+    if (quality !== 'high') return;
+    const pcx = Math.floor(pos.x / CH), pcz = Math.floor(pos.z / CH), key = pcx + ',' + pcz;
+    let made = 0;
+    for (let dx = -CR; dx <= CR; dx++) for (let dz = -CR; dz <= CR; dz++) {
+      if (dx * dx + dz * dz > CR * CR + 1) continue;
+      const k = (pcx + dx) + ',' + (pcz + dz);
+      if (!chunks.has(k) && made < 2) { chunks.set(k, makeChunk(pcx + dx, pcz + dz)); made++; }
+    }
+    if (key !== lastChunk) {
+      lastChunk = key;
+      for (const [k, m] of chunks) { const [x, z] = k.split(',').map(Number); if (Math.abs(x - pcx) > CR + 1 || Math.abs(z - pcz) > CR + 1) { scene.remove(m); m.dispose(); chunks.delete(k); } }
+    }
+  }
+
+  // ----- Qushlar -----
+  const birds = [];
+  const birdM = mat(0x2b2d42);
+  for (let i = 0; i < 14; i++) {
+    const b = new THREE.Group();
+    b.add(new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.5), birdM));
+    const wl = new THREE.Group(), wr = new THREE.Group();
+    const wing = new THREE.BoxGeometry(0.8, 0.03, 0.28);
+    const ml = new THREE.Mesh(wing, birdM); ml.position.x = -0.4; wl.add(ml);
+    const mr = new THREE.Mesh(wing, birdM); mr.position.x = 0.4; wr.add(mr);
+    b.add(wl, wr);
+    const flock = Math.floor(i / 5);
+    b.userData = { a: rand() * 6.28, sp: (flock % 2 ? 1 : -1) * (0.12 + rand() * 0.05), R: 30 + flock * 25 + rand() * 6, y: 20 + flock * 5 + rand() * 3, ph: rand() * 6, cx: (flock - 1) * 20, cz: (1 - flock) * 15, wl, wr };
+    scene.add(b); birds.push(b);
+  }
+
   // ----- Tangalar -----
   const coinGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.08, 24);
   const coinM = mat(0xffc93c, { metalness: 0.75, roughness: 0.25, emissive: 0xffa500, emissiveIntensity: 0.25 });
   function walkable(x, z, pad = 0.8) {
     const r = Math.hypot(x, z);
     if (r > ISLAND_R - 2 || r < 4.8) return false;
-    return !inside(x, z, pad, statics);
+    return !inside(x, z, pad, nearS(x, z));
   }
   function randomSpot(cx = 0, cz = 0, R = ISLAND_R - 4, avoidRoad = true) {
     for (let k = 0; k < 300; k++) {
@@ -763,19 +907,23 @@ export function createWorld(canvasEl, opts) {
   let night = false;
   function setNight(n) {
     night = n;
-    const sky = n ? 0x121838 : 0xa8dcff;
-    scene.background = new THREE.Color(sky);
-    scene.fog = new THREE.Fog(sky, n ? 60 : 90, n ? 260 : 340);
-    hemi.intensity = n ? 0.45 : 1.1; hemi.color.set(n ? 0x8fa3ff : 0xd6ecff);
-    sun.intensity = n ? 0.5 : 2.2; sun.color.set(n ? 0xaab8ff : 0xfff4e0);
+    scene.background = n ? new THREE.Color(0x121838) : null;
+    sky.visible = !n;
+    scene.environment = n ? nightEnv : dayEnv;
+    scene.fog = new THREE.Fog(n ? 0x121838 : 0xa9c8e6, n ? 60 : 160, n ? 260 : 600);
+    hemi.intensity = n ? 0.35 : 0.35; hemi.color.set(n ? 0x8fa3ff : 0xd6ecff);
+    sun.intensity = n ? 0.45 : 2.6; sun.color.set(n ? 0xaab8ff : 0xfff1dc);
+    water.material.uniforms.sunColor.value.set(n ? 0x8899cc : 0xfff4e0);
+    water.material.uniforms.waterColor.value.set(n ? 0x061a33 : 0x0e5a7d);
+    bladeM.color.set(n ? 0x7d8ca6 : 0xffffff);
     stars.visible = moon.visible = n;
     grassM.color.set(n ? 0x7d8ca6 : 0xffffff);
     sandM.color.set(n ? 0x8a8fa8 : 0xffffff);
-    waterM.color.set(n ? 0x4a6fa8 : 0xffffff);
+    waterM.color.set(n ? 0x1a3a66 : 0x2f8fc2);
     lampHeadM.emissiveIntensity = n ? 2.6 : 0.05;
     nightMats.forEach(m => { m.emissiveIntensity = n ? 1 : 0; });
     cloudM.color.set(n ? 0x5b6385 : 0xffffff); cloudM.emissiveIntensity = n ? 0.02 : 0.2;
-    renderer.toneMappingExposure = n ? 1.2 : 1.05;
+    renderer.toneMappingExposure = n ? 1.0 : 0.85;
   }
   let quality = 'high';
   function setQuality(qv) {
@@ -784,6 +932,9 @@ export function createWorld(canvasEl, opts) {
     renderer.setPixelRatio(qv === 'high' ? Math.min(devicePixelRatio, 2) : 1);
     scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); });
     spawnNPCs(qv === 'high' ? 34 : 14);
+    water.visible = qv === 'high'; waterLow.visible = qv !== 'high';
+    if (qv !== 'high') { for (const m of chunks.values()) { scene.remove(m); m.dispose(); } chunks.clear(); }
+    lastChunk = '';
     resize();
   }
   function resize() {
@@ -884,7 +1035,7 @@ export function createWorld(canvasEl, opts) {
     }
     speedNow += (Math.min(1.6, il * run) - speedNow) * Math.min(1, dt * 10);
     pp.x = pos.x; pp.z = pos.z;
-    if (pos.y < 2.5) { resolve(pp, 0.35, statics); resolve(pp, 0.35, dynCars); }
+    if (pos.y < 2.5) { resolve(pp, 0.35, nearS(pp.x, pp.z)); resolve(pp, 0.35, dynCars); }
     pos.x = pp.x; pos.z = pp.z;
     const pr = Math.hypot(pos.x, pos.z);
     if (pr > ISLAND_R + 6) { pos.x *= (ISLAND_R + 6) / pr; pos.z *= (ISLAND_R + 6) / pr; }
@@ -904,7 +1055,7 @@ export function createWorld(canvasEl, opts) {
       const want = dd > 0.4 ? Math.min(9.5, dd * 3) : 0;
       petSpeed += (want - petSpeed) * Math.min(1, dt * 6);
       if (dd > 0.05) { petPos.x += dx / dd * petSpeed * dt; petPos.z += dz / dd * petSpeed * dt; let a = Math.atan2(dx, dz) - petRy; a = Math.atan2(Math.sin(a), Math.cos(a)); if (petSpeed > 0.3) petRy += a * Math.min(1, dt * 8); }
-      pp.x = petPos.x; pp.z = petPos.z; resolve(pp, 0.25, statics); petPos.x = pp.x; petPos.z = pp.z;
+      pp.x = petPos.x; pp.z = petPos.z; resolve(pp, 0.25, nearS(pp.x, pp.z)); petPos.x = pp.x; petPos.z = pp.z;
       pet.group.position.set(petPos.x, 0, petPos.z); pet.group.rotation.y = petRy;
       pet.animate(dt, petSpeed / 6, time);
     }
@@ -913,7 +1064,7 @@ export function createWorld(canvasEl, opts) {
     if (il > 0.1 && !drag && iz < 0.3) { let dy = (facing + Math.PI) - camYaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); camYaw += dy * Math.min(1, dt * 1.3); }
     const blocked = (d, p) => {
       const cx = pos.x + Math.sin(camYaw) * d * Math.cos(p), cz = pos.z + Math.cos(camYaw) * d * Math.cos(p), cy = pos.y + 1.3 + d * Math.sin(p);
-      return statics.some(c => (c.box || c.r > 3.5) && cy < 30 && (c.box ? inside(cx, cz, 0.8, [c]) : Math.hypot(cx - c.x, cz - c.z) < c.r + 1.2));
+      return nearS(cx, cz).some(c => (c.box || c.r > 3.5) && cy < 30 && (c.box ? inside(cx, cz, 0.8, [c]) : Math.hypot(cx - c.x, cz - c.z) < c.r + 1.2));
     };
     let cd = camDist, cpch = camPitch;
     while (cpch < 1.2 && blocked(cd, cpch)) cpch += 0.08;
@@ -924,7 +1075,7 @@ export function createWorld(canvasEl, opts) {
     camera.lookAt(pos.x, pos.y + 1.25, pos.z);
 
     // Quyosh soyasi o'yinchi atrofida
-    sun.position.set(pos.x + 30, 60, pos.z + 22); sun.target.position.set(pos.x, 0, pos.z);
+    sun.position.set(pos.x + sunDir.x * 90, sunDir.y * 90, pos.z + sunDir.z * 90); sun.target.position.set(pos.x, 0, pos.z);
 
     // Kamerani to'sayotgan daraxtlar
     const ax = camera.position.x, az = camera.position.z, bx = pos.x - ax, bz = pos.z - az, bl = bx * bx + bz * bz || 1;
@@ -1009,7 +1160,7 @@ export function createWorld(canvasEl, opts) {
         }
       }
       pp.x = n.x; pp.z = n.z;
-      resolve(pp, 0.3, statics); resolve(pp, 0.3, dynCars);
+      resolve(pp, 0.3, nearS(pp.x, pp.z)); resolve(pp, 0.3, dynCars);
       const pdx = pp.x - pos.x, pdz = pp.z - pos.z, pd = Math.hypot(pdx, pdz);
       if (pd < 0.7 && pd > 1e-4) { pp.x = pos.x + pdx / pd * 0.7; pp.z = pos.z + pdz / pd * 0.7; }
       n.x = pp.x; n.z = pp.z;
@@ -1030,7 +1181,15 @@ export function createWorld(canvasEl, opts) {
       d.position.set(Math.sin(d.userData.a) * r, 4 + Math.sin(p * Math.PI) * 1.4 - p * 3.2, Math.cos(d.userData.a) * r);
     }
     for (const c of clouds) { c.position.x += c.userData.speed * dt; if (c.position.x > 260) c.position.x = -260; }
-    waterTex.offset.x = time * 0.004; waterTex.offset.y = time * 0.003;
+    water.material.uniforms.time.value = time * 0.6;
+    grassUniforms.uTime.value = time;
+    updateGrass();
+    for (const b of birds) {
+      const u = b.userData; u.a += u.sp * dt;
+      b.position.set(Math.sin(u.a) * u.R + u.cx, u.y + Math.sin(time * 0.7 + u.ph) * 1.5, Math.cos(u.a) * u.R + u.cz);
+      b.rotation.y = u.a + Math.PI / 2 * Math.sign(u.sp);
+      const f = Math.sin(time * 11 + u.ph) * 0.7; u.wl.rotation.z = f; u.wr.rotation.z = -f;
+    }
     if (playgroundSwings) playgroundSwings.forEach((s, i) => { s.rotation.x = Math.sin(time * 1.8 + i * 1.3) * 0.45; });
 
     // Boshqa o'yinchilar

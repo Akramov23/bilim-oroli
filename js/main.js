@@ -204,6 +204,8 @@ function boot() {
   $('#emoteBar').replaceChildren(...emotes.map(e => h('button', { onclick: () => { world.showEmote('me', e); sendEmote(e); } }, e)));
 
   if (state.music) setMusic(true);
+  // Kunduzi qushlar sayraydi
+  setInterval(() => { if (!isDark() && !document.hidden && Math.random() < 0.55) sfx.chirp(); }, 7000);
   if (!state.onboarded || !state.lang) onboarding(state.lang ? 1 : 0);
   else { $('#onboard').classList.add('hidden'); startGame(false); }
 }

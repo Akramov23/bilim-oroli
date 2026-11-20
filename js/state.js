@@ -9,7 +9,7 @@ const DEFAULTS = () => ({
   theme: 'auto',
   sound: true,
   music: false,
-  quality: 'high',
+  quality: matchMedia('(pointer: coarse)').matches ? 'low' : 'high',
   coins: 30,
   xp: 0,
   cards: [],

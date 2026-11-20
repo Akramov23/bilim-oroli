@@ -33,6 +33,10 @@ export const sfx = {
   wrong() { tone(200, 0.28, 'sawtooth', 0.07); },
   jump() { tone(420, 0.12, 'sine', 0.08); tone(640, 0.1, 'sine', 0.06, 0.05); },
   level() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.3, 'triangle', 0.14, i * 0.11)); },
+  chirp() {
+    const base = 2200 + Math.random() * 1400;
+    for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) { tone(base + Math.random() * 500, 0.07, 'sine', 0.025, i * 0.11); tone(base * 1.25, 0.05, 'sine', 0.018, i * 0.11 + 0.05); }
+  },
   pack() { [392, 523, 659, 784].forEach((f, i) => tone(f, 0.2, 'square', 0.05, i * 0.08)); },
 };
 
