@@ -56,3 +56,15 @@ js/audio.js         — ovozlar va musiqa
 ```
 
 Progress brauzerning `localStorage`ida saqlanadi (server/baza yo'q).
+
+## Internetda
+
+🌐 https://akramov23.github.io/bilim-oroli/ (GitHub Pages, repo: Akramov23/bilim-oroli)
+
+O'zgarishlarni saytga chiqarish:
+
+```bash
+cd ~/Desktop/bilim-oroli && git add -A && git commit -m "Yangilanish" && git push
+```
+
+1–2 daqiqadan keyin sayt yangilanadi.
